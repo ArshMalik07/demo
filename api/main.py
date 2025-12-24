@@ -25,6 +25,11 @@ app = FastAPI(title="GEO Intelligence API")
 # ---------------------------
 # 1️⃣ URL → Company
 # ---------------------------
+
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to the GEO Intelligence API"}
+
 @app.post("/company")
 def get_company(req: CompanyRequest):
     company = get_company_if_valid(req.url)
