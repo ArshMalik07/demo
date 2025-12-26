@@ -1,11 +1,14 @@
-#Function Service-6:
+# Function Service-6
 # persona_scoring.py: It scores the mentioned personas
-from typing import Dict, List
-from personas import generate_personas
-from llm_client import create_llm
-from langchain_core.messages import HumanMessage
+
+from typing import Dict
 import json
 import re
+
+from langchain_core.messages import HumanMessage
+from llm_client import create_llm
+from personas import generate_personas
+from llm_utils import extract_text   # ✅ COMMON NORMALIZER
 
 
 def score_personas(text: str) -> Dict[str, int]:
@@ -16,6 +19,8 @@ def score_personas(text: str) -> Dict[str, int]:
     """
     llm = create_llm()
 
+    personas = generate_personas("", "")
+
     prompt = f"""
 Analyze the following text and evaluate how strongly each persona viewpoint appears:
 
@@ -23,20 +28,17 @@ TEXT:
 {text}
 
 Personas:
-{json.dumps(generate_personas("",""))}
+{json.dumps(personas)}
 
 Rules:
 - Score each persona from 0 to 100 (no decimals)
-- Higher score = stronger textual relevance to that persona
+- Higher score = stronger textual relevance
 - Lower score = weaker relevance
-- Output must be a JSON dict {{ "persona_name": score }}
-
-Example output:
-{{"technical_lead": 58, "investor": 32, ...}}
-    """
+- Output must be ONLY a JSON object
+"""
 
     resp = llm.invoke([HumanMessage(content=prompt)])
-    raw = resp.content.strip()
+    raw = extract_text(resp)   # ✅ SINGLE SOURCE
 
     try:
         match = re.search(r"\{.*\}", raw, re.DOTALL)
@@ -44,17 +46,14 @@ Example output:
     except:
         result = {}
 
-    # Post-process → integer & clamp 0–100
+    # Clamp + normalize
+    final = {}
     for k, v in result.items():
         try:
             v = round(float(v))
         except:
             v = 0
-        v = max(0, min(v, 100))
-        result[k] = int(v)
+        final[k] = max(0, min(v, 100))
 
-    # Sort descending by score (persona relevance ranking)
-    sorted_pairs = sorted(result.items(), key=lambda x: x[1], reverse=True)
-    sorted_result = {k: v for k, v in sorted_pairs}
-
-    return sorted_result
+    # Sort descending
+    return dict(sorted(final.items(), key=lambda x: x[1], reverse=True))

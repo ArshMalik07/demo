@@ -4,31 +4,10 @@
 import json
 import re
 from typing import List, Dict
-import os
-from dotenv import load_dotenv
-from langchain_openai import AzureChatOpenAI
+
 from langchain_core.messages import HumanMessage
-
-load_dotenv()
-
-# Azure config
-AZURE_BASE = os.getenv("AZURE_OPENAI_API_BASE")
-AZURE_KEY = os.getenv("AZURE_OPENAI_API_KEY")
-AZURE_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-01")
-AZURE_MODEL = os.getenv("AZURE_MODEL", "gpt-4o")
-
-
-def get_llm():
-    if not AZURE_KEY:
-        raise RuntimeError("Azure API Key missing — check .env")
-
-    return AzureChatOpenAI(
-        azure_endpoint=AZURE_BASE,
-        model=AZURE_MODEL,
-        openai_api_key=AZURE_KEY,
-        openai_api_version=AZURE_VERSION,
-        temperature=0.0
-    )
+from llm_client import create_llm
+from llm_utils import extract_text   # ✅ SINGLE SOURCE
 
 
 # -------------------------------
@@ -48,9 +27,9 @@ Rules:
 - Output ONLY JSON LIST
 """
 
-    llm = get_llm()
+    llm = create_llm()
     resp = llm.invoke([HumanMessage(content=prompt)])
-    raw = resp.content.strip()
+    raw = extract_text(resp)
 
     try:
         match = re.search(r"\[.*\]", raw, re.DOTALL)
@@ -97,9 +76,9 @@ Rules:
 - Output ONLY JSON LIST
 """
 
-    llm = get_llm()
+    llm = create_llm()
     resp = llm.invoke([HumanMessage(content=prompt)])
-    raw = resp.content.strip()
+    raw = extract_text(resp)
 
     try:
         match = re.search(r"\[.*\]", raw, re.DOTALL)

@@ -1,8 +1,11 @@
-# persona_generator.py
+# personas.py
 from typing import List
+import json
+import re
+
 from langchain_core.messages import HumanMessage
 from llm_client import create_llm
-import json, re
+from llm_utils import extract_text   # ✅ COMMON NORMALIZER
 
 
 def generate_personas(company: str, category: str, num: int = 6) -> List[str]:
@@ -30,7 +33,10 @@ Rules:
 
     llm = create_llm()
     resp = llm.invoke([HumanMessage(content=prompt)])
-    raw = resp.content.strip()
+    raw = extract_text(resp)   # ✅ SINGLE SOURCE OF TRUTH
 
     match = re.search(r"\[.*\]", raw, re.DOTALL)
-    return json.loads(match.group(0)) if match else []
+    try:
+        return json.loads(match.group(0)) if match else []
+    except:
+        return []
